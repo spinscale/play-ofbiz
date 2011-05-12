@@ -1,0 +1,86 @@
+package ${entity.packageName};
+
+import play.modules.ofbiz.OfbizEntityModel;
+import play.modules.ofbiz.OfbizEntityModelList;
+import play.modules.ofbiz.OfbizQuery;
+
+import java.sql.Timestamp;
+import java.sql.Blob;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+import org.ofbiz.entity.condition.EntityCondition;
+import org.ofbiz.entity.GenericEntityException;
+
+public class ${entity.name} extends OfbizEntityModel {
+
+    public ${entity.name}() {
+        super("${entity.name}");
+    }
+
+    public static OfbizQuery find(String query, Object ... fields) {
+       return new OfbizQuery(${entity.name}.class, query, fields);
+    }
+
+    public static OfbizQuery find(EntityCondition condition) {
+       return new OfbizQuery(${entity.name}.class, condition);
+    }
+
+#{list entity.fields, as:'field'}
+    public ${field.type} ${field.name}; #{if field.comment}// ${field.comment}#{/if}
+
+#{/list}
+
+
+#{list entity.relations, as:'relation'}
+#{if (relation.assoc == "one" || relation.assoc == "one-nofk") }
+    public ${relation.type} related${relation.name};*{
+    public ${relation.type} getRelated${relation.name}() {
+        return OfbizEntityModel.createFromGenericValue(${relation.type}.class, gv, "${relation.name}");
+    }
+}*
+#{/if}
+#{elseif relation.assoc == "many" }
+    public List<${relation.type}> related${relation.name};*{
+    public List<${relation.type}> getRelated${relation.name}() {
+        return OfbizEntityModel.createFromGenericValueList(${relation.type}.class, gv, "${relation.name}");
+    }
+}*
+#{/elseif}
+#{else}
+    // unknwon relation type: ${relation.type}
+#{/else}
+
+#{/list}
+
+    public void save() {
+        try {
+            gv.store();
+        } catch (GenericEntityException e) {
+            throw new RuntimeException(e);
+        }
+    }
+	
+    public void remove() {
+        try {
+            gv.remove();
+        } catch (GenericEntityException e) {
+            throw new RuntimeException(e);
+        }
+    }
+	
+*{
+#{list entity.fields, as:'field'}
+    public ${field.type} get${field.name.capFirst()}() {
+        return (${field.type}) gv.get("${field.name.capFirst()}");
+    }
+    public void set${field.name.capFirst()}(${field.type} value) {
+        gv.set("${field.name}", value);
+    }
+#{/list}
+}*
+}

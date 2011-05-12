@@ -1,0 +1,153 @@
+h1. OFBiz entity engine module
+
+
+The OFBiz entity engine is the persistence layer of the Apache OFBiz (Open for Business) system. OFBiz is an ERP system with many modules, ranging from accounting, ecommerce, its own CMS, HR, product management, image management, facility and warehouse management to almost all aspects of a company.
+
+In order to support all these business case it also features its own entity engine used to persists and load data from the database.
+
+All the entities, no matter if it is a Product work a CmsContent, are loaded as a so-called @GenericValue@, which is simply a Map with some more methods like getting entites which are linked to this.
+The other important entity is an @EntityCondition@, which can contain arbitrary complex queries.
+
+As such a map is not the best choice for play and objects are easier to work with, this module generates java classes from the XML definitions of the entitites and uses byte code enhancement to keep them as short as needed. Oh, and I love IDE support for completion of fields in an entity, instead of looking them up in some weird XML file.
+
+NOTE: I have only tested this with postgresql, so please check it with other systems.
+
+NOTE: This tool is best tested with a current git build from the playframework in order to work at all. This module relies on the newly added feature, that getter and setter methods are marked by the PropertiesEnhancer of play core.
+
+
+h2. Getting and compiling the module
+
+Just get this module via github via git clone git://github.com/spinscale/play-ofbiz.git
+Go into the directory and enter
+
+bc. play build-module
+
+
+h2. Configuring your module
+
+Add this to your application.conf (I know its deprecated, but its faster). Alternatively add is as a module via conf/dependencies.yml
+
+bc. module.ofbiz=../path/to/ofbiz/module
+
+* Also, you need to put your favourite JDBC driver into the lib/ directory of your application - or again, just use dependencies.yml.
+* Copy all your @entitymodel.xml@ files from your ofbiz installation to @conf/ofbiz/ofbiz-entity/@ and leave them with an .xml ending.
+* Copy your @cache.properties@ file into the @conf/@ directory (not conf/ofbiz!)
+* Copy your @ofbiz-log4j.xml@ into @conf/ofbiz@
+* Copy your @entityengine.xml@ file into @conf/ofbiz@
+* Copy your @fieldtypes/@ directory to @conf/ofbiz@
+* Create an @ofbiz-component.xml@ like this
+bc. <?xml version="1.0" encoding="UTF-8"?>
+<ofbiz-component name="play"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://ofbiz.apache.org/dtds/ofbiz-component.xsd">
+    <resource-loader name="main" type="component"/>
+ <entity-resource type="model" reader-name="main" loader="main" location="ofbiz-entity/accounting-entitymodel.xml"/>
+ <entity-resource type="model" reader-name="main" loader="main" location="ofbiz-entity/accounting-entitymodel_reports.xml"/>
+ <entity-resource type="model" reader-name="main" loader="main" location="ofbiz-entity/...xml"/>
+ ...
+ </ofbiz-component>
+
+Make sure the component name attribute is set to "play", otherwise nothing will work.
+
+
+h2. Creating your entities in your application
+
+The next step is to create real java classes from the XML definitions in conf/ofbiz/ofbiz-entity/
+Just enter
+
+bc. play ofbiz:create
+
+Warning: This call always overwrites all existing entites in the models/ directory. So do not do this, if you enriched you entity manually, for example with validations or checks.
+
+h2. Starting your application
+
+bc. play test -Dofbiz.home=conf/ofbiz/
+
+Do not forget to add the @ofbiz.home@ property, otherwise you will experience startup exceptions and nothing works.
+Wait a little bit, and check if there are no hard exceptions throws. There might pop up problems when trying to enhance some entities, but this should not break the complete process of enhancing.
+
+
+h2. Example code
+
+A generated Product class looks like this
+
+bc. public class Product extends OfbizEntityModel {
+ 
+    public Product() {
+        super("Product");
+    }
+ 
+    public static OfbizQuery find(String query, Object ... fields) {
+       return new OfbizQuery(Product.class, query, fields);
+    }
+    
+    public String productId; 
+    public String productTypeId; 
+    public Timestamp salesDiscontinuationDate; 
+    public String isBlacklisted; // extended
+    ...
+ 
+    public ProductType relatedProductType;
+    public List<ProductTypeAttr> relatedProductTypeAttr;
+    ...
+ 
+    public void save() {
+        ...
+    }
+}
+
+Finding a product by some features works as with the standard JPA model
+
+bc. Product product = Product.find("byProductIdAndInternalName", "MEBC1U2U40KM", "My great Product").first();
+product.internalName = "Other name";
+product.save();
+
+You can also use OFBiz builtin entity conditions
+
+bc. Product product = Product.find(EntityCondition ec).first();
+
+You can delete an entity
+
+bc. product.remove();
+
+You can disable the cache when searching
+
+bc. Product product = Product.find(EntityCondition ec).noCache().first();
+
+You can of course get a list
+
+bc. List<Product> product = Product.find(EntityCondition ec).fetch();
+
+You can limit this list
+
+bc. List<Product> product = Product.find(EntityCondition ec).limit(10).fetch();
+
+You can get related entities (as defined in the XML)
+
+bc. ProductCategory pc = product.relatedPrimaryProductCategory;
+
+
+If you take a look at the Product entity, you will see it always inherits from @OfbizEntityModel@. The @GenericValue@ for each entity is set in this class. This allows you to overwrite all getters and setters of you entity, however you have to make sure to also write the @GenericValue@, for example like this:
+
+bc. public void setInternalName(String f) {
+        gv.set("internalName", f);
+    }
+
+In case you are wondering why you cannot call the save() method on an entity, this is a view entity and is comprised of several other entites. Saving only works on single entities.
+
+h2. How does it work internally?
+
+When entered _play ofbiz:create_, the EntityModelReader class in the module reads all files in @conf/ofbiz@ of your application, parses each entity definition and then writes out one file per entity and per view entity. It also handles extend entities correctly. In order to parse the files correctly, it uses java classes generated by JAXB. These were generated from the entityengine.xsd.
+
+The OFBizPlugin class instantiates a delegator on startup, which is used for all queries.
+The enhancer enhances all public fields with getters and setters which access the @GenericValue@ of each entity.
+If a field however starts with related, it is enhanced with a special getter, which gets the related entity out of the cache.
+
+h2. Bugs
+
+* Startup time is incredibly high (over a minute) when having ca. 900 entities. I dont know if this is normal. Any hints? Might also be the enhancer, but it seems quite quick.
+* There is a problem with fields starting with a capital character (as defined in the entitymodel.xml)
+* If the there is a char(1) configured, the source should create a Boolean insteaf of a String out of it, as it merely can contain 'Y' for true
+* Complex aliases do not work
+* All the jar files have been added manually, there might miss some.
+* No other dbs tested except postgres

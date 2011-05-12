@@ -1,0 +1,82 @@
+package ${entity.packageName};
+
+import play.modules.ofbiz.OfbizEntityModel;
+import play.modules.ofbiz.OfbizEntityModelList;
+import play.modules.ofbiz.OfbizQuery;
+
+import java.sql.Timestamp;
+import java.sql.Blob;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+import org.ofbiz.entity.condition.EntityCondition;
+import org.ofbiz.entity.GenericEntityException;
+
+public class ${entity.name} extends OfbizEntityModel {
+
+    public ${entity.name}() {
+        super("${entity.name}");
+    }
+
+    public static OfbizQuery find(String query, Object ... fields) {
+        return new OfbizQuery(${entity.name}.class, query, fields);
+    }
+
+    public static OfbizQuery find(EntityCondition condition) {
+       return new OfbizQuery(${entity.name}.class, condition);
+    }
+
+#{list entity.fields, as:'field'}
+    public ${field.type} ${field.name};
+#{/list}
+
+// Aliases begin
+#{list entity.aliases, as:'alias'}
+#{if alias.commentedOut}
+    // public ${alias.type} ${alias.name}; // aliased from ${alias.sourceEntity}, but ignored as already written
+#{/if}
+#{else}
+    public ${alias.type} ${alias.name}; // aliased from ${alias.sourceEntity}
+#{/else}
+#{/list}
+// Aliases end
+
+// Field Alias begin
+// Field Alias end
+
+#{list entity.relations, as:'relation'}
+#{if (relation.assoc == "one" || relation.assoc == "one-nofk") }
+    public ${relation.type} related${relation.name};*{
+    public ${relation.type} getRelated${relation.name}() {
+        return OfbizEntityModel.createFromGenericValue(${relation.type}.class, gv, "${relation.name}");
+    }
+}*
+#{/if}
+#{elseif relation.assoc == "many" }
+    public List<${relation.type}> related${relation.name};*{
+    public List<${relation.type}> getRelated${relation.name}() {
+        return OfbizEntityModel.createFromGenericValueList(${relation.type}.class, gv, "${relation.name}");
+    }
+}*
+#{/elseif}
+#{else}
+    // unknwon relation type: ${relation.type}
+#{/else}
+
+#{/list}
+
+/*
+#{list entity.fields, as:'field'}
+    public ${field.type} get${field.name.capFirst()}() {
+        return (${field.type}) gv.get("${field.name.capFirst()}");
+    }
+    public void set${field.name.capFirst()}(${field.type} value) {
+        gv.set("${field.name}", value);
+    }
+#{/list}
+*/
+}
