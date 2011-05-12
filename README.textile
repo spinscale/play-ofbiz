@@ -77,25 +77,20 @@ bc. public class Product extends OfbizEntityModel {
     public Product() {
         super("Product");
     }
-    
     public static OfbizQuery find(String query, Object ... fields) {
        return new OfbizQuery(Product.class, query, fields);
     }
-    
     public String productId; 
     public String productTypeId; 
     public Timestamp salesDiscontinuationDate; 
     public String isBlacklisted; // extended
     ...
-   
     public ProductType relatedProductType;
     public List<ProductTypeAttr> relatedProductTypeAttr;
     ...
-    
     public void save() {
         ...
     }
-    
     public void remove() {
         ...
     }
