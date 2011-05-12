@@ -1,5 +1,6 @@
 h1. OFBiz entity engine module
 
+Contact: Alexander Reelsen, <_alexander_---reelsen_._net_> (remove all underscores, and make an at sign of the three dashes)
 
 The OFBiz entity engine is the persistence layer of the Apache OFBiz (Open for Business) system. OFBiz is an ERP system with many modules, ranging from accounting, ecommerce, its own CMS, HR, product management, image management, facility and warehouse management to almost all aspects of a company.
 
