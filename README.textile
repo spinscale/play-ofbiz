@@ -35,8 +35,8 @@ bc. module.ofbiz=../path/to/ofbiz/module
 * Copy your @cache.properties@ file into the @conf/@ directory (not conf/ofbiz!)
 * Copy your @ofbiz-log4j.xml@ into @conf/ofbiz@
 * Copy your @entityengine.xml@ file into @conf/ofbiz@
-* Copy your @fieldtypes/@ directory to @conf/ofbiz@
-* Create an @ofbiz-component.xml@ like this
+* Copy your @fieldtypes/@ directory into @conf/ofbiz@, which contains all your fieldtype definitions
+* Create an @conf/ofbiz/ofbiz-component.xml@ like this
 
 bc. <?xml version="1.0" encoding="UTF-8"?>
 <ofbiz-component name="play"
@@ -55,7 +55,7 @@ Make sure the component name attribute is set to "play", otherwise nothing will 
 h2. Creating your entities in your application
 
 The next step is to create real java classes from the XML definitions in conf/ofbiz/ofbiz-entity/
-Just enter
+Just enter (in the base directory of your application)
 
 bc. play ofbiz:create
 
@@ -151,3 +151,4 @@ h2. Bugs
 * Complex aliases do not work
 * All the jar files have been added manually, there might miss some.
 * No other dbs tested except postgres
+* Only tested under MacOS
